@@ -1,0 +1,58 @@
+# create subsets of fonts for my website
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * * '
+
+name: fonts
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+
+    name: Create fonts
+# 检出当前仓库的最新代码
+    steps:
+      - uses: actions/checkout@HEAD
+# 检出另一个仓库的最新代码
+      - name: Checkout haoshuang
+        uses: actions/checkout@HEAD
+        with:
+          path: haoshuang
+          repository: think-crow/haoshaung
+          submodules: recursive
+# 安装fonttools 工具，以便进行字体子集的创建
+      - name: Install packages
+        run: |
+          sudo apt-get -qq install -y fonttools > /dev/null
+# 从 haoshuang 仓库中的 .md 和 .json 文件中提取汉字，并写入 chars.txt 文件
+      - name: Extract characters
+        run: |
+          mkdir -p fonts
+          find haoshuang \( -name '*.md' -o -name '*.json' \) -exec grep -o -P '[\x{4E00}-\x{9FFF}]' {} \; | sort | uniq > fonts/chars.txt
+# find haoshuang -name '*.md' -exec grep -o -P '[\x{4E00}-\x{9FFF}]' {} \; | sort | uniq > fonts/chars.txt
+# 下载不同字体文件，使用 pyftsubset 工具根据提取的字符子集创建 woff2 格式的字体文件
+      - name: Build fonts
+        run: |
+          export FONT_NAME=SourceHanSerifCN-Regular
+          wget -nv https://github.com/adobe-fonts/source-han-serif/raw/release/SubsetOTF/CN/${FONT_NAME}.otf
+          pyftsubset ${FONT_NAME}.otf --text-file=fonts/chars.txt --no-hinting --flavor=woff2 --output-file=fonts/${FONT_NAME}-shuang.woff2
+          export FONT_NAME=FandolKai-Regular
+          wget -nv https://mirrors.tuna.tsinghua.edu.cn/CTAN/fonts/fandol/${FONT_NAME}.otf
+          pyftsubset ${FONT_NAME}.otf --text-file=fonts/chars.txt --no-hinting --flavor=woff2 --output-file=fonts/${FONT_NAME}-shuang.woff2
+          export FONT_NAME=AR-PL-KaitiM-GB
+          wget -nv https://db.onlinewebfonts.com/t/157c7e79f7f057bbeacf5f113b964875.woff2 -O ${FONT_NAME}.woff2
+          pyftsubset ${FONT_NAME}.woff2 --text-file=fonts/chars.txt --no-hinting --flavor=woff2 --output-file=fonts/${FONT_NAME}-shuang.woff2
+          export FONT_NAME=gkai00mp
+          wget -nv https://mirrors.tuna.tsinghua.edu.cn/CTAN/fonts/arphic-ttf/${FONT_NAME}.ttf -O ${FONT_NAME}.ttf
+          pyftsubset ${FONT_NAME}.ttf --text-file=fonts/chars.txt --no-hinting --flavor=woff2 --output-file=fonts/${FONT_NAME}-shuang.woff2
+          export FONT_NAME=bkai00mp
+          wget -nv https://mirrors.tuna.tsinghua.edu.cn/CTAN/fonts/arphic-ttf/${FONT_NAME}.ttf -O ${FONT_NAME}.ttf
+          pyftsubset ${FONT_NAME}.ttf --text-file=fonts/chars.txt --no-hinting --flavor=woff2 --output-file=fonts/${FONT_NAME}-shuang.woff2
+          
+      - name: Push fonts
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add fonts/*
+          git commit -m "update fonts" && git push || true
