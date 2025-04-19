@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@HEAD
         with:
           path: haoshuang
-          repository: think-crow/haoshaung
+          repository: think-crow/haoshuang
           submodules: recursive
 # 安装fonttools 工具，以便进行字体子集的创建
       - name: Install packages
